@@ -1,5 +1,17 @@
 <template>
-
+  <!-- Full Screen Loading State -->
+  <div v-if="isAppLoading"
+    class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900 transition-opacity duration-300">
+    <div class="relative flex flex-col items-center">
+      <!-- Outer spin -->
+      <div
+        class="w-16 h-16 rounded-full border-4 border-slate-200 dark:border-slate-800 border-t-indigo-600 dark:border-t-indigo-400 animate-spin">
+      </div>
+      <h3 class="mt-6 text-lg font-semibold tracking-wide text-slate-800 dark:text-slate-100 animate-pulse">
+        Memuat Kalender...
+      </h3>
+    </div>
+  </div>
 
   <nav
     class="mb-5 sticky top-0 z-50 flex items-center justify-between w-full px-6 py-4 transition-colors duration-300 bg-white border-b border-slate-200 dark:bg-slate-900 dark:border-slate-800">
@@ -528,7 +540,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import {
   Dialog, DialogPanel, DialogTitle, TransitionRoot, TransitionChild, Switch, Listbox,
   ListboxButton,
@@ -540,7 +552,10 @@ import { toast } from 'vue3-toastify'
 import { useForm, useField } from 'vee-validate'
 import * as yup from 'yup'
 
-const isDark = ref(false)
+const isDark = ref(
+  localStorage.getItem('theme') === 'dark' ||
+  (!localStorage.getItem('theme') && typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+)
 watch(isDark, (newValue) => {
   if (newValue) {
     document.documentElement.classList.add('dark')
@@ -549,58 +564,92 @@ watch(isDark, (newValue) => {
     document.documentElement.classList.remove('dark')
     localStorage.setItem('theme', 'light')
   }
-})
+}, { immediate: true })
+
+const isAppLoading = ref(true)
+const events = ref<EventItem[]>([])
 
 // Mock Data Jadwal / Events
-const events = ref<EventItem[]>([
-  {
-    id: '2a',
-    title: 'Cuti Bersama',
-    startDate: '2026-06-15',
-    endDate: '2026-06-17',
-    color: 'amber',
-    tag: 'libur',
-    badge: { text: 'L', color: 'bg-rose-600' },
-  },
-  {
-    id: '1',
-    title: 'Workshop Vue 3 & TS',
-    startDate: '2026-07-07',
-    endDate: '2026-07-09',
-    time: '09:00 - 15:00',
-    color: 'blue',
-    tag: 'event',
-    badge: { text: 'W', color: 'bg-blue-600' },
-  },
-  {
-    id: '2',
-    title: 'Cuti Bersama',
-    startDate: '2026-07-15',
-    endDate: '2026-07-17',
-    color: 'amber',
-    tag: 'libur',
-    badge: { text: 'L', color: 'bg-rose-600' },
-  },
-  {
-    id: '2',
-    title: 'Freeze',
-    startDate: '2026-08-15',
-    endDate: '2026-08-17',
-    color: 'gray',
-    tag: 'freeze',
-    badge: { text: 'L', color: 'bg-rose-600' },
-  },
-  {
-    id: '3',
-    title: 'Evaluasi Kuartal',
-    startDate: '2026-07-28',
-    endDate: '2026-07-28',
-    time: '13:00',
-    color: 'purple',
-    tag: 'event',
-    badge: { text: 'M', color: 'bg-purple-600' },
-  },
-])
+const fetchHoliday = async () => {
+  await new Promise(resolve => setTimeout(resolve, 5000))
+  const response = await fetch('https://calendar-cor.vercel.app/api/libur')
+  const data = await response.json()
+  const items = Array.isArray(data.data) ? data.data : []
+  const data_libur = items.map((item: any) => {
+    return {
+      id: item.id ? String(item.id) : Date.now().toString(),
+      title: item.deskripsi || item.nama_libur || '',
+      startDate: item.tanggal,
+      endDate: item.tanggal,
+      color: 'amber',
+      tag: 'libur',
+    }
+  })
+  return data_libur
+}
+
+onMounted(async () => {
+  try {
+    const libur = await fetchHoliday()
+    events.value = libur
+  } catch (error) {
+    console.error('Failed to load holidays:', error)
+    toast.error('Gagal memuat data hari libur.', {
+      position: 'top-right'
+    })
+  } finally {
+    isAppLoading.value = false
+  }
+})
+// const events = ref<EventItem[]>([
+//   {
+//     id: '2a',
+//     title: 'Cuti Bersama',
+//     startDate: '2026-06-15',
+//     endDate: '2026-06-17',
+//     color: 'amber',
+//     tag: 'libur',
+//     badge: { text: 'L', color: 'bg-rose-600' },
+//   },
+//   {
+//     id: '1',
+//     title: 'Workshop Vue 3 & TS',
+//     startDate: '2026-07-07',
+//     endDate: '2026-07-09',
+//     time: '09:00 - 15:00',
+//     color: 'blue',
+//     tag: 'event',
+//     badge: { text: 'W', color: 'bg-blue-600' },
+//   },
+//   {
+//     id: '2',
+//     title: 'Cuti Bersama',
+//     startDate: '2026-07-15',
+//     endDate: '2026-07-17',
+//     color: 'amber',
+//     tag: 'libur',
+//     badge: { text: 'L', color: 'bg-rose-600' },
+//   },
+//   {
+//     id: '2',
+//     title: 'Freeze',
+//     startDate: '2026-08-15',
+//     endDate: '2026-08-17',
+//     color: 'gray',
+//     tag: 'freeze',
+//     badge: { text: 'L', color: 'bg-rose-600' },
+//   },
+//   {
+//     id: '3',
+//     title: 'Evaluasi Kuartal',
+//     startDate: '2026-07-28',
+//     endDate: '2026-07-28',
+//     time: '13:00',
+//     color: 'purple',
+//     tag: 'event',
+//     badge: { text: 'M', color: 'bg-purple-600' },
+//   },
+// ])
 
 const currentDate = ref(new Date())
 
