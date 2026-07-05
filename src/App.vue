@@ -2,7 +2,7 @@
   <!-- Full Screen Loading State -->
   <div
     v-if="isAppLoading"
-    class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900 transition-opacity duration-300"
+    class="fixed inset-0 z-100 flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900 transition-opacity duration-300"
   >
     <div class="relative flex flex-col items-center">
       <!-- Outer spin -->
@@ -87,6 +87,7 @@
       </div>
     </div>
   </nav>
+
   <div
     class="w-full max-w-7xl mx-auto p-4 md:p-6 bg-slate-50 dark:bg-slate-900 rounded-2xl shadow-xs border border-slate-200/80 dark:border-slate-800"
   >
@@ -163,7 +164,7 @@
       <div
         v-for="blank in blankDays"
         :key="'blank-' + blank"
-        class="min-h-[60px] sm:min-h-[115px] p-1 sm:p-2 bg-slate-100/40 dark:bg-slate-850/10 border-slate-200/60 dark:border-slate-700/50 opacity-0 pointer-events-none"
+        class="min-h-15 sm:min-h-28.75 p-1 sm:p-2 bg-slate-100/40 dark:bg-slate-850/10 border-slate-200/60 dark:border-slate-700/50 opacity-0 pointer-events-none"
       ></div>
 
       <!-- Tanggal Bulan Berjalan -->
@@ -172,7 +173,7 @@
         :key="day.dateString"
         @click="openDayDetails(day.dateString)"
         :class="[
-          'min-h-[65px] sm:min-h-[115px] py-1.5 sm:py-2 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/50 transition cursor-pointer flex flex-col justify-between group relative select-none rounded-md',
+          'min-h-16.25 sm:min-h-28.75 py-1.5 sm:py-2 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/50 transition cursor-pointer flex flex-col justify-between group relative select-none rounded-md',
           day.isToday
             ? 'border-indigo-500 ring-2 ring-indigo-500/20 dark:ring-indigo-400/20'
             : 'border-slate-200/60 dark:border-slate-700/50 hover:border-indigo-300 dark:hover:border-indigo-500',
@@ -196,7 +197,7 @@
           <span
             v-if="getBadgeForDate(day.dateString)"
             :class="[
-              'text-xs text-white font-bold mr-1 rounded-full transition-colors w-5 h-5 inline-flex items-center justify-center',
+              'text-xs text-white dark:text-black font-bold mr-1 rounded-full transition-colors w-5 h-5 inline-flex items-center justify-center',
               getBadgeForDate(day.dateString)?.color,
             ]"
           >
@@ -211,7 +212,7 @@
             :key="event.id"
             :class="[
               'py-1 text-[11px] font-semibold truncate border-y shadow-xs transition-all w-full block',
-              colorClasses[event.color],
+              colorClasses[event.color ?? 'blue'],
               event.startDate === day.dateString && event.title
                 ? 'rounded-l-lg pl-2 pr-0 border-l ml-1 w-[calc(100%-4px)]'
                 : '',
@@ -293,7 +294,7 @@
                     :key="event.id"
                     :class="[
                       'p-3 rounded-xl border flex flex-col gap-2 relative group transition-all',
-                      colorClasses[event.color],
+                      colorClasses[event.color ?? 'blue'],
                       isActionLoading && loadingEventId === event.id
                         ? 'opacity-60 cursor-wait'
                         : '',
@@ -306,7 +307,7 @@
                     >
                       <div class="flex-1 min-w-0">
                         <div
-                          class="text-sm font-semibold break-words text-slate-900 dark:text-slate-100"
+                          class="text-sm font-semibold wrap-break-word text-slate-900 dark:text-slate-100"
                         >
                           {{ event.title }}
                         </div>
@@ -321,7 +322,10 @@
                       </div>
 
                       <!-- Action Buttons (Edit and Delete) -->
-                      <div v-if="event.tag === 'event'" class="flex items-center gap-1 shrink-0">
+                      <div
+                        v-if="event.tag === 'event' || event.tag === 'imple'"
+                        class="flex items-center gap-1 shrink-0"
+                      >
                         <button
                           @click="startEditing(event)"
                           :disabled="isActionLoading"
@@ -755,7 +759,7 @@
                           >
                             <ListboxOption
                               v-slot="{ active, selected }"
-                              v-for="typeOption in ['libur', 'imple', 'freeze']"
+                              v-for="typeOption in ['major', 'imple', 'freeze']"
                               :key="typeOption"
                               :value="typeOption"
                               as="template"
@@ -948,6 +952,55 @@
                   class="text-lg font-bold text-slate-900 dark:text-slate-50 border-b border-slate-100 dark:border-slate-700 pb-3"
                   >Pengaturan</DialogTitle
                 >
+
+                <div class="mt-4 space-y-3">
+                  <h4>Group WFH Hari ini</h4>
+                  <!-- Buatkan 4 button A B C D sejajar -->
+                  <div class="flex gap-2 items-center">
+                    <button
+                      v-for="label in ['A', 'B', 'C', 'D']"
+                      :key="label"
+                      type="button"
+                      @click="changeTodayWfh(label)"
+                      :class="[
+                        'rounded-xl text-slate-700 cursor-pointer transition-all duration-200',
+                        initialColor[label],
+                        todayWfhLabel === label ? 'w-12 h-12 font-bold border-2' : 'w-10 h-10',
+                      ]"
+                    >
+                      {{ label }}
+                    </button>
+                  </div>
+                </div>
+                <div class="border-t border-slate-200 dark:border-slate-700 my-4"></div>
+                <div class="py-2">
+                  <h4 class="block text-slate-900 dark:text-slate-50">Hitung libur</h4>
+                  <Switch
+                    id="hitung-libur"
+                    v-model="hitungLibur"
+                    class="mt-2 relative inline-flex h-6 w-11 items-center rounded-full cursor-pointer"
+                    :class="hitungLibur ? 'bg-blue-600' : 'bg-slate-200'"
+                  >
+                    <span class="sr-only">Hitung libur</span>
+                    <span
+                      :class="[
+                        'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform',
+                        hitungLibur ? 'translate-x-6 bg-green-600' : 'translate-x-1 bg-slate-200',
+                      ]"
+                    ></span>
+                  </Switch>
+                </div>
+
+                <div class="mt-6 flex justify-end">
+                  <button
+                    type="button"
+                    :disabled="isActionLoading"
+                    class="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    @click="closeSettings"
+                  >
+                    Tutup
+                  </button>
+                </div>
               </DialogPanel>
             </TransitionChild>
           </div>
@@ -971,7 +1024,7 @@ import {
   TransitionChild,
   TransitionRoot,
 } from '@headlessui/vue'
-import type { EventItem } from './types'
+import { colorClasses, type EventItem } from './types'
 import { toast } from 'vue3-toastify'
 import { useField, useForm } from 'vee-validate'
 import * as yup from 'yup'
@@ -998,40 +1051,64 @@ watch(
 
 const isAppLoading = ref(true)
 const events = ref<EventItem[]>([])
+let wfh1: EventItem[] = []
+let wfh2: EventItem[] = []
+let freeze: EventItem[] = []
+const hitungLibur = ref<boolean>(localStorage.getItem('hitung-libur') == 'true')
+const todayWfhLabel = ref<string>('')
 
-// Mock Data Jadwal / Events
-const fetchHoliday = async () => {
-  const response = await fetch('http://localhost:1000/api/calendar/wfh')
+watch(hitungLibur, () => {
+  localStorage.setItem('hitung-libur', hitungLibur.value.toString())
+  if (hitungLibur.value) {
+    events.value = wfh2
+  } else {
+    events.value = wfh1
+  }
+  events.value = [...events.value, ...freeze]
+})
+
+const initialColor: Record<string, string> = {
+  A: 'bg-amber-300',
+  B: 'bg-emerald-300',
+  C: 'bg-sky-300',
+  D: 'bg-violet-300',
+}
+const fetchHoliday = async (url: string) => {
+  const response = await fetch(url)
   const data = await response.json()
   const items = Array.isArray(data.payload) ? data.payload : []
 
   const initialMap: Record<string, string> = { '1': 'A', '2': 'B', '3': 'C', '4': 'D' }
-  const initialColor: Record<string, string> = {
-    A: 'bg-amber-300',
-    B: 'bg-emerald-300',
-    C: 'bg-sky-300',
-    D: 'bg-violet-300',
-  }
 
   return items.map((item: any) => {
     let label: string = initialMap[item.description] ?? ''
+    const initial = JSON.parse(localStorage.getItem('initial') || '{}') as {tanggal: string, label: string}
+    const today = getTodayStr()
+    if (item.start === today && item.tag === 'wfh' && initial.tanggal !== today){
+      localStorage.setItem('initial', JSON.stringify({tanggal: today, label}))
+    }
+    const newLabel = changeLabel(parseInt(localStorage.getItem('shift-wfh') || '0'), label)
+    if (todayWfhLabel.value == '' && item.start == today && item.tag == 'wfh') {
+      todayWfhLabel.value = newLabel
+    }
     return {
       id: crypto.randomUUID(),
       title: item.tag == 'wfh' ? '' : item.description,
       startDate: item.start,
       endDate: item.start,
-      color: 'amber',
+      color: 'red',
       tag: item.tag,
       badge:
         item.tag == 'wfh'
           ? {
-              text: label,
-              color: initialColor[label],
+              text: newLabel,
+              color: initialColor[newLabel] ?? '',
             }
           : null,
     }
   })
 }
+
 const fetchFreeze = async () => {
   const response = await fetch('http://localhost:1000/api/calendar/freeze')
   const data = await response.json()
@@ -1051,10 +1128,15 @@ const fetchFreeze = async () => {
 
 onMounted(async () => {
   try {
-    events.value = await fetchHoliday()
-    const freeze = await fetchFreeze()
+    wfh1 = await fetchHoliday('http://localhost:1000/api/calendar/wfh')
+    wfh2 = await fetchHoliday('http://localhost:1000/api/calendar/wfh?holiday=true')
+    freeze = await fetchFreeze()
+    if (hitungLibur.value) {
+      events.value = wfh2
+    } else {
+      events.value = wfh1
+    }
     events.value = [...events.value, ...freeze]
-    // console.log(events.value)
   } catch (error) {
     console.error('Failed to load holidays:', error)
     toast.error('Gagal memuat data hari libur.', {
@@ -1072,34 +1154,41 @@ const openSettings = () => {
 const closeSettings = () => {
   isSettingsOpen.value = false
 }
-// const events = ref<EventItem[]>([
-//   {
-//     id: '2a',
-//     title: 'Cuti Bersama',
-//     startDate: '2026-06-15',
-//     endDate: '2026-06-17',
-//     color: 'amber',
-//     tag: 'libur',
-//     badge: { text: 'L', color: 'bg-rose-600' },
-//   },
-// ])
+
+const changeLabel = (diff: number, label: string): string => {
+  const min = 65
+  const max = 68
+  const N = max - min + 1
+  const asci = label.charCodeAt(0)
+  return String.fromCharCode(min + ((((asci - min + diff) % N) + N) % N))
+}
+
+const changeTodayWfh = (label: string) => {
+  const before = todayWfhLabel.value.charCodeAt(0)
+  const after = label.charCodeAt(0)
+  if (before === after) return
+
+  const diff = after - before
+
+  todayWfhLabel.value = label
+  const initial = JSON.parse(localStorage.getItem('initial') ?? '{}') as {tanggal: string, label: string}
+  const diffInitial = after - initial.label.charCodeAt(0)
+  localStorage.setItem('shift-wfh', diffInitial.toString())
+  events.value.forEach((item) => {
+    if (item.tag == 'wfh') {
+      const newLabel = changeLabel(diff, item.badge!!.text)
+      item.badge = {
+        text: newLabel,
+        color: initialColor[newLabel] ?? '',
+      }
+    }
+  })
+}
 
 const currentDate = ref(new Date())
 
 const isOpen = ref(false)
 const selectedDate = ref('')
-
-// Skema Warna
-const colorClasses = {
-  blue: 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200/60 dark:border-blue-800/50',
-  green:
-    'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200/60 dark:border-emerald-800/50',
-  purple:
-    'bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200/60 dark:border-purple-800/50',
-  amber:
-    'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200/60 dark:border-amber-800/50',
-  gray: 'bg-gray-200 dark:bg-gray-950/40 text-gray-700 dark:text-gray-300 border-gray-200/60 dark:border-gray-800/50',
-}
 
 const weekDays = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab']
 const weekDaysMobile = ['M', 'S', 'S', 'R', 'K', 'J', 'S']
@@ -1116,6 +1205,13 @@ const blankDays = computed(() => {
   return new Date(currentYear.value, currentMonth.value, 1).getDay()
 })
 
+const formatYYYYMMDD = (date: Date) => {
+  const yearStr = date.getFullYear()
+  const monthStr = String(date.getMonth() + 1).padStart(2, '0')
+  const dayStr = String(date.getDate()).padStart(2, '0')
+  return `${yearStr}-${monthStr}-${dayStr}`
+}
+
 // Menyusun array objek tanggal dalam bulan berjalan
 const daysInMonth = computed(() => {
   const numberOfDays = new Date(currentYear.value, currentMonth.value + 1, 0).getDate()
@@ -1124,12 +1220,6 @@ const daysInMonth = computed(() => {
   return Array.from({ length: numberOfDays }, (_, i) => {
     const dayNum = i + 1
     const dateObj = new Date(currentYear.value, currentMonth.value, dayNum)
-
-    // Format YYYY-MM-DD local manual agar presisi bebas masalah timezone UTC
-    const yearStr = dateObj.getFullYear()
-    const monthStr = String(dateObj.getMonth() + 1).padStart(2, '0')
-    const dayStr = String(dateObj.getDate()).padStart(2, '0')
-    const dateString = `${yearStr}-${monthStr}-${dayStr}`
 
     const isToday =
       today.getDate() === dayNum &&
@@ -1140,7 +1230,7 @@ const daysInMonth = computed(() => {
 
     return {
       dayNumber: dayNum,
-      dateString,
+      dateString: formatYYYYMMDD(dateObj),
       isToday,
       isWeekend,
     }
@@ -1271,8 +1361,8 @@ const isDeleteLoading = ref(false)
 const eventIdToDelete = ref<string | null>(null)
 
 const getTypeName = (type: string) => {
-  if (type === 'libur') return 'Libur'
-  if (type === 'imple') return 'Imple'
+  if (type === 'major') return 'Major Release'
+  if (type === 'imple') return 'Implementasi'
   if (type === 'freeze') return 'Freeze'
   return type
 }
@@ -1326,10 +1416,7 @@ const isSaving = ref(false)
 // Default to today helper
 const getTodayStr = () => {
   const today = new Date()
-  const yearStr = today.getFullYear()
-  const monthStr = String(today.getMonth() + 1).padStart(2, '0')
-  const dayStr = String(today.getDate()).padStart(2, '0')
-  return `${yearStr}-${monthStr}-${dayStr}`
+  return formatYYYYMMDD(today)
 }
 
 // Yup Validation Schema
@@ -1348,7 +1435,7 @@ const schema = yup.object({
         return value >= startDate
       },
     ),
-  eventType: yup.string().oneOf(['libur', 'imple', 'freeze']).required('Tipe jadwal wajib diisi.'),
+  eventType: yup.string().oneOf(['major', 'imple', 'freeze']).required('Tipe jadwal wajib diisi.'),
   startTime: yup
     .string()
     .nullable()
@@ -1376,17 +1463,13 @@ const schema = yup.object({
     }),
 })
 
-const {
-  handleSubmit,
-  errors,
-  resetForm: resetVeeForm,
-} = useForm({
+const { handleSubmit, resetForm: resetVeeForm } = useForm({
   validationSchema: schema,
   initialValues: {
     title: '',
     startDate: getTodayStr(),
     endDate: getTodayStr(),
-    eventType: 'libur' as 'libur' | 'imple' | 'freeze',
+    eventType: 'imple' as 'major' | 'imple' | 'freeze',
     startTime: '',
     endTime: '',
   },
@@ -1408,7 +1491,7 @@ const resetForm = () => {
       title: '',
       startDate: getTodayStr(),
       endDate: getTodayStr(),
-      eventType: 'libur',
+      eventType: 'imple',
       startTime: '',
       endTime: '',
     },
@@ -1429,10 +1512,8 @@ const saveEvent = handleSubmit(async (values) => {
   isSaving.value = true
 
   try {
-    // Mock API Call (2 seconds delay)
     await new Promise((resolve, reject) => {
       setTimeout(() => {
-        // Mock a 5% chance of API error to demonstrate error toast handling
         if (Math.random() < 0.05) {
           reject(new Error('Koneksi database terputus.'))
         } else {
@@ -1451,17 +1532,17 @@ const saveEvent = handleSubmit(async (values) => {
     }
 
     const newEvent: EventItem = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       title: values.title.trim(),
       startDate: values.startDate,
       endDate: values.endDate,
       color:
-        values.eventType === 'libur' ? 'amber' : values.eventType === 'imple' ? 'blue' : 'gray',
-      tag: 'event',
+        values.eventType === 'major' ? 'amber' : values.eventType === 'imple' ? 'blue' : 'gray',
+      tag: values.eventType,
       badge: {
-        text: values.eventType === 'libur' ? 'L' : values.eventType === 'imple' ? 'I' : 'F',
+        text: values.eventType === 'major' ? 'L' : values.eventType === 'imple' ? 'I' : 'F',
         color:
-          values.eventType === 'libur'
+          values.eventType === 'major'
             ? 'bg-rose-600'
             : values.eventType === 'imple'
               ? 'bg-blue-600'
