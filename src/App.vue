@@ -954,7 +954,7 @@
                 >
 
                 <div class="mt-4 space-y-3">
-                  <h4>Group WFH Hari ini</h4>
+                  <h4 class="block text-slate-900 dark:text-slate-50">Group WFH Hari ini</h4>
                   <!-- Buatkan 4 button A B C D sejajar -->
                   <div class="flex gap-2 items-center">
                     <button
@@ -965,7 +965,9 @@
                       :class="[
                         'rounded-xl text-slate-700 cursor-pointer transition-all duration-200',
                         initialColor[label],
-                        todayWfhLabel === label ? 'w-12 h-12 font-bold border-2' : 'w-10 h-10',
+                        todayWfhLabel === label
+                          ? 'w-12 h-12 font-bold border-3 dark:border-indigo-500'
+                          : 'w-10 h-10',
                       ]"
                     >
                       {{ label }}
@@ -974,21 +976,86 @@
                 </div>
                 <div class="border-t border-slate-200 dark:border-slate-700 my-4"></div>
                 <div class="py-2">
-                  <h4 class="block text-slate-900 dark:text-slate-50">Hitung libur</h4>
-                  <Switch
-                    id="hitung-libur"
-                    v-model="hitungLibur"
-                    class="mt-2 relative inline-flex h-6 w-11 items-center rounded-full cursor-pointer"
-                    :class="hitungLibur ? 'bg-blue-600' : 'bg-slate-200'"
+                  <div class="flex items-center justify-between">
+                    <h4 class="block text-slate-900 dark:text-slate-50">Hitung libur</h4>
+                    <Switch
+                      id="hitung-libur"
+                      v-model="hitungLibur"
+                      class="relative inline-flex h-6 w-11 items-center rounded-full cursor-pointer transition-colors"
+                      :class="hitungLibur ? 'bg-blue-600' : 'bg-slate-200 dark:bg-slate-700'"
+                    >
+                      <span class="sr-only">Hitung libur</span>
+                      <span
+                        :class="[
+                          'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform',
+                          hitungLibur ? 'translate-x-6' : 'translate-x-1',
+                        ]"
+                      ></span>
+                    </Switch>
+                  </div>
+                </div>
+
+                <div class="border-t border-slate-200 dark:border-slate-700 my-3"></div>
+                <div class="py-2">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <h4 class="block text-slate-900 dark:text-slate-50">Tampilkan WFH</h4>
+                      <p class="text-xs text-slate-500 dark:text-slate-400">
+                        Tampilkan jadwal WFH di kalender
+                      </p>
+                    </div>
+                    <Switch
+                      id="tampilkan-wfh"
+                      v-model="showWfh"
+                      class="relative inline-flex h-6 w-11 items-center rounded-full cursor-pointer transition-colors"
+                      :class="showWfh ? 'bg-blue-600' : 'bg-slate-200 dark:bg-slate-700'"
+                    >
+                      <span class="sr-only">Tampilkan WFH</span>
+                      <span
+                        :class="[
+                          'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform',
+                          showWfh ? 'translate-x-6' : 'translate-x-1',
+                        ]"
+                      ></span>
+                    </Switch>
+                  </div>
+
+                  <!-- Child Toggles (A, B, C, D) -->
+                  <div
+                    v-if="showWfh"
+                    class="mt-3 flex gap-3 items-center pl-2 transition-all duration-300"
                   >
-                    <span class="sr-only">Hitung libur</span>
-                    <span
-                      :class="[
-                        'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform',
-                        hitungLibur ? 'translate-x-6 bg-green-600' : 'translate-x-1 bg-slate-200',
-                      ]"
-                    ></span>
-                  </Switch>
+                    <div
+                      v-for="label in ['A', 'B', 'C', 'D']"
+                      :key="label"
+                      class="flex flex-col items-center"
+                    >
+                      <Switch
+                        v-model="wfhGroups[label]"
+                        class="relative inline-flex h-7 w-14 items-center rounded-full transition-colors cursor-pointer"
+                        :class="
+                          wfhGroups[label] ? initialColor[label] : 'bg-slate-200 dark:bg-slate-700'
+                        "
+                      >
+                        <span
+                          class="absolute text-[11px] font-extrabold select-none transition-all duration-200"
+                          :class="[
+                            wfhGroups[label]
+                              ? 'left-2.5 text-slate-800'
+                              : 'right-2.5 text-slate-400 dark:text-slate-500',
+                          ]"
+                        >
+                          {{ label }}
+                        </span>
+                        <span
+                          :class="[
+                            'inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform',
+                            wfhGroups[label] ? 'translate-x-8' : 'translate-x-1',
+                          ]"
+                        ></span>
+                      </Switch>
+                    </div>
+                  </div>
                 </div>
 
                 <div class="mt-6 flex justify-end">
@@ -1029,12 +1096,12 @@ import { toast } from 'vue3-toastify'
 import { useField, useForm } from 'vee-validate'
 import * as yup from 'yup'
 
-const isDark = ref(
-  localStorage.getItem('theme') === 'dark' ||
-    (!localStorage.getItem('theme') &&
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches),
-)
+const API_URL = import.meta.env.VITE_API_URL
+if (!API_URL) {
+  throw new Error('VITE_API_URL is not defined')
+}
+
+const isDark = ref(localStorage.getItem('theme') === 'dark')
 watch(
   isDark,
   (newValue) => {
@@ -1054,8 +1121,27 @@ const events = ref<EventItem[]>([])
 let wfh1: EventItem[] = []
 let wfh2: EventItem[] = []
 let freeze: EventItem[] = []
+let createdEvents: EventItem[] = []
 const hitungLibur = ref<boolean>(localStorage.getItem('hitung-libur') == 'true')
 const todayWfhLabel = ref<string>('')
+const getStoredWfhSettings = () => {
+  const stored = localStorage.getItem('settings-wfh')
+  if (stored) {
+    try {
+      return JSON.parse(stored)
+    } catch (e) {
+      // Ignored
+    }
+  }
+  return {
+    show: true,
+    groups: { A: true, B: true, C: true, D: true },
+  }
+}
+
+const storedWfhSettings = getStoredWfhSettings()
+const showWfh = ref<boolean>(storedWfhSettings.show)
+const wfhGroups = ref<Record<string, boolean>>(storedWfhSettings.groups)
 
 watch(hitungLibur, () => {
   localStorage.setItem('hitung-libur', hitungLibur.value.toString())
@@ -1064,14 +1150,33 @@ watch(hitungLibur, () => {
   } else {
     events.value = wfh1
   }
-  events.value = [...events.value, ...freeze]
+  events.value = [...events.value, ...createdEvents, ...freeze]
 })
+
+const saveWfhSettings = () => {
+  localStorage.setItem(
+    'settings-wfh',
+    JSON.stringify({
+      show: showWfh.value,
+      groups: wfhGroups.value,
+    }),
+  )
+}
+
+watch(showWfh, saveWfhSettings)
+watch(wfhGroups, saveWfhSettings, { deep: true })
 
 const initialColor: Record<string, string> = {
   A: 'bg-amber-300',
   B: 'bg-emerald-300',
   C: 'bg-sky-300',
   D: 'bg-violet-300',
+}
+const colorEvents: Record<string, EventItem['color']> = {
+  imple: 'blue',
+  major: 'orange',
+  freeze: 'gray',
+  event: 'purple',
 }
 const fetchHoliday = async (url: string) => {
   const response = await fetch(url)
@@ -1082,10 +1187,13 @@ const fetchHoliday = async (url: string) => {
 
   return items.map((item: any) => {
     let label: string = initialMap[item.description] ?? ''
-    const initial = JSON.parse(localStorage.getItem('initial') || '{}') as {tanggal: string, label: string}
+    const initial = JSON.parse(localStorage.getItem('initial') || '{}') as {
+      tanggal: string
+      label: string
+    }
     const today = getTodayStr()
-    if (item.start === today && item.tag === 'wfh' && initial.tanggal !== today){
-      localStorage.setItem('initial', JSON.stringify({tanggal: today, label}))
+    if (item.start === today && item.tag === 'wfh' && initial.tanggal !== today) {
+      localStorage.setItem('initial', JSON.stringify({ tanggal: today, label }))
     }
     const newLabel = changeLabel(parseInt(localStorage.getItem('shift-wfh') || '0'), label)
     if (todayWfhLabel.value == '' && item.start == today && item.tag == 'wfh') {
@@ -1110,7 +1218,7 @@ const fetchHoliday = async (url: string) => {
 }
 
 const fetchFreeze = async () => {
-  const response = await fetch('http://localhost:1000/api/calendar/freeze')
+  const response = await fetch(`${API_URL}/calendar/freeze`)
   const data = await response.json()
   const items = Array.isArray(data.payload) ? data.payload : []
 
@@ -1126,17 +1234,42 @@ const fetchFreeze = async () => {
   })
 }
 
+const fetchCreated = async () => {
+  const response = await fetch(`${API_URL}/calendar/event`)
+  const data = await response.json()
+  const items = Array.isArray(data.payload) ? data.payload : []
+  let formattedTime: string | undefined = undefined
+
+  return items.map((item: any) => {
+    if (item.start_time && item.end_time) {
+      formattedTime = `${item.start_time} - ${item.end_time}`
+    } else if (item.start_time) {
+      formattedTime = item.start_time
+    }
+    return {
+      id: item.id,
+      title: item.description,
+      startDate: item.start_date,
+      endDate: item.end_date,
+      time: formattedTime,
+      color: colorEvents[item.tag] || 'blue',
+      tag: item.tag,
+    }
+  })
+}
+
 onMounted(async () => {
   try {
-    wfh1 = await fetchHoliday('http://localhost:1000/api/calendar/wfh')
-    wfh2 = await fetchHoliday('http://localhost:1000/api/calendar/wfh?holiday=true')
+    wfh1 = await fetchHoliday(`${API_URL}/calendar/wfh`)
+    wfh2 = await fetchHoliday(`${API_URL}/calendar/wfh?holiday=true`)
     freeze = await fetchFreeze()
+    createdEvents = await fetchCreated()
     if (hitungLibur.value) {
       events.value = wfh2
     } else {
       events.value = wfh1
     }
-    events.value = [...events.value, ...freeze]
+    events.value = [...events.value, ...createdEvents, ...freeze]
   } catch (error) {
     console.error('Failed to load holidays:', error)
     toast.error('Gagal memuat data hari libur.', {
@@ -1171,7 +1304,10 @@ const changeTodayWfh = (label: string) => {
   const diff = after - before
 
   todayWfhLabel.value = label
-  const initial = JSON.parse(localStorage.getItem('initial') ?? '{}') as {tanggal: string, label: string}
+  const initial = JSON.parse(localStorage.getItem('initial') ?? '{}') as {
+    tanggal: string
+    label: string
+  }
   const diffInitial = after - initial.label.charCodeAt(0)
   localStorage.setItem('shift-wfh', diffInitial.toString())
   events.value.forEach((item) => {
@@ -1239,11 +1375,24 @@ const daysInMonth = computed(() => {
 
 // Fungsi filter jadwal per tanggal
 const getEventsForDate = (dateString: string, isWfh: boolean = false) => {
+  if (isWfh && !showWfh.value) {
+    return []
+  }
   const targetDate = new Date(dateString).getTime()
   return events.value.filter((event) => {
     const start = new Date(event.startDate).getTime()
     const end = new Date(event.endDate).getTime()
-    const additional = isWfh ? event.tag == 'wfh' : event.tag != 'wfh'
+
+    let additional = false
+    if (isWfh) {
+      if (event.tag === 'wfh') {
+        const groupLabel = event.badge?.text
+        additional = !!(groupLabel && wfhGroups.value[groupLabel])
+      }
+    } else {
+      additional = event.tag !== 'wfh'
+    }
+
     return targetDate >= start && targetDate <= end && additional
   })
 }
@@ -1332,7 +1481,19 @@ const saveEditEvent = async () => {
 
   try {
     // Mock API Call (1.5 seconds delay)
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    const res = await fetch(`${API_URL}/calendar/event/${editingEventId.value}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        description: titleTrimmed,
+      }),
+    })
+    const result = await res.json()
+    if (result.status != 200) {
+      throw new Error('Gagal update event')
+    }
 
     const eventToEdit = events.value.find((e) => e.id === editingEventId.value)
     if (eventToEdit) {
@@ -1387,9 +1548,17 @@ const confirmDeleteEvent = async () => {
 
   try {
     // Mock API Call (1.5 seconds delay)
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    const res = await fetch(`${API_URL}/calendar/event/${eventIdToDelete.value}`, {
+      method: 'DELETE',
+    })
+
+    const result = await res.json()
+    if (result.status != 200) {
+      throw new Error('Gagal delete event')
+    }
 
     events.value = events.value.filter((e) => e.id !== eventIdToDelete.value)
+    createdEvents = createdEvents.filter((e) => e.id !== eventIdToDelete.value)
 
     toast.success('Jadwal berhasil dihapus!', {
       position: 'top-right',
@@ -1512,46 +1681,47 @@ const saveEvent = handleSubmit(async (values) => {
   isSaving.value = true
 
   try {
-    await new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (Math.random() < 0.05) {
-          reject(new Error('Koneksi database terputus.'))
-        } else {
-          resolve(true)
-        }
-      }, 2000)
+    const data = {
+      start_date: values.startDate,
+      end_date: values.endDate,
+      description: values.title,
+      tag: values.eventType,
+      start_time: values.startTime,
+      end_time: values.endTime,
+    }
+    const response = await fetch(`${API_URL}/calendar/event`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
     })
-
+    const result = await response.json()
+    if (result.status != 200) {
+      new Error('Gagal menambahkan jadwal.')
+    }
+    const payload = result.payload
     let formattedTime: string | undefined = undefined
     if (values.eventType === 'imple') {
-      if (values.startTime && values.endTime) {
-        formattedTime = `${values.startTime} - ${values.endTime}`
-      } else if (values.startTime) {
-        formattedTime = values.startTime
+      if (payload.start_time && payload.end_time) {
+        formattedTime = `${payload.start_time} - ${payload.end_time}`
+      } else if (payload.start_time) {
+        formattedTime = payload.start_time
       }
     }
 
     const newEvent: EventItem = {
-      id: crypto.randomUUID(),
-      title: values.title.trim(),
-      startDate: values.startDate,
-      endDate: values.endDate,
-      color:
-        values.eventType === 'major' ? 'amber' : values.eventType === 'imple' ? 'blue' : 'gray',
-      tag: values.eventType,
-      badge: {
-        text: values.eventType === 'major' ? 'L' : values.eventType === 'imple' ? 'I' : 'F',
-        color:
-          values.eventType === 'major'
-            ? 'bg-rose-600'
-            : values.eventType === 'imple'
-              ? 'bg-blue-600'
-              : 'bg-gray-600',
-      },
+      id: payload.id,
+      title: payload.description,
+      startDate: payload.start_date,
+      endDate: payload.end_date,
+      color: colorEvents[payload.tag] || 'blue',
+      tag: payload.tag,
       ...(formattedTime ? { time: formattedTime } : {}),
     }
 
-    events.value.push(newEvent)
+    events.value.unshift(newEvent)
+    createdEvents.unshift(newEvent)
 
     // Show success toast notification
     toast.success('Jadwal baru berhasil disimpan!', {
